@@ -17,25 +17,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.streamsets.pipeline.stage.processor.kudulookup;
 
-package com.streamsets.pipeline.stage.destination.kudu;
+import com.streamsets.pipeline.api.*;
+import com.streamsets.pipeline.configurablestage.DProcessor;
+import com.streamsets.pipeline.stage.destination.kudu.Groups;
 
-import com.streamsets.pipeline.api.GenerateResourceBundle;
-import com.streamsets.pipeline.api.Label;
+@StageDef(
+    version = 1,
+    label = "Kudu Lookup",
+    description = "Performs KV lookups to enrich records",
+    icon = "kudu.png",
+    privateClassLoader = true,
+    upgrader = KuduProcessorUpgrader.class,
+    onlineHelpRefUrl = "TODO"
+)
 
+@ConfigGroups(Groups.class)
 @GenerateResourceBundle
-public enum Groups implements Label {
-  KUDU("Kudu"),
-  ADVANCED("Advanced"),
-  LOOKUP("Lookup");
-  private final String label;
-
-  Groups(String label) {
-    this.label = label;
-  }
+public class KuduLookupDProcessor extends DProcessor {
+  @ConfigDefBean(groups = {"LOOKUP", "KUDU"})
+  public KuduLookupConfig conf;
 
   @Override
-  public String getLabel() {
-    return label;
+  protected Processor createProcessor() {
+    return new KuduLookupProcessor(conf);
   }
 }

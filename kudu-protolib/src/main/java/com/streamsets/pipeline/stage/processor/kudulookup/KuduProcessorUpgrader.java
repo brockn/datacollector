@@ -9,7 +9,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,24 +18,20 @@
  * limitations under the License.
  */
 
-package com.streamsets.pipeline.stage.destination.kudu;
+package com.streamsets.pipeline.stage.processor.kudulookup;
 
-import com.streamsets.pipeline.api.GenerateResourceBundle;
-import com.streamsets.pipeline.api.Label;
+import com.streamsets.pipeline.api.Config;
+import com.streamsets.pipeline.api.StageException;
+import com.streamsets.pipeline.api.StageUpgrader;
 
-@GenerateResourceBundle
-public enum Groups implements Label {
-  KUDU("Kudu"),
-  ADVANCED("Advanced"),
-  LOOKUP("Lookup");
-  private final String label;
+import java.util.List;
 
-  Groups(String label) {
-    this.label = label;
-  }
+public class KuduProcessorUpgrader implements StageUpgrader {
 
   @Override
-  public String getLabel() {
-    return label;
+  public List<Config> upgrade(
+      String library, String stageName, String stageInstance, int fromVersion, int toVersion, List<Config> configs
+  ) throws StageException {
+    return configs;
   }
 }
