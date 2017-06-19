@@ -91,6 +91,8 @@ public class KuduLookupLoader extends CacheLoader<Record, List<Map<String, Field
           } else {
             scannerBuilder.addPredicate(KuduPredicate.newComparisonPredicate(schema, KuduPredicate.ComparisonOp.EQUAL, value));
           }
+        } else {
+          throw new StageException(Errors.KUDU_33, type.getName());
         }
       }
       scanner = scannerBuilder.build();

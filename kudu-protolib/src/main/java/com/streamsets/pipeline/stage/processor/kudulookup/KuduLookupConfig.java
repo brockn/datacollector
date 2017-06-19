@@ -58,7 +58,7 @@ public class KuduLookupConfig {
       type = ConfigDef.Type.MODEL,
       defaultValue = "",
       label = "Field to Column Mapping",
-      description = "Optionally specify additional field mappings when input field name and column name don't match.",
+      description = "Specify which columns from kudu to populate the record with",
       displayPosition = 40,
       group = "KUDU"
   )
