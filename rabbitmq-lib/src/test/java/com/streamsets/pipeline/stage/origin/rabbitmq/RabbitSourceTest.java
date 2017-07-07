@@ -17,7 +17,6 @@ package com.streamsets.pipeline.stage.origin.rabbitmq;
 
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Consumer;
 import com.rabbitmq.client.Envelope;
 import com.streamsets.pipeline.api.Record;
 import com.streamsets.pipeline.api.Source;
@@ -40,10 +39,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TransferQueue;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -154,6 +153,7 @@ public class RabbitSourceTest extends BaseRabbitStageTest{
     assertEquals(String.valueOf(REDELIVERED), record.getHeader().getAttribute("redelivered"));
     assertEquals(EXCHANGE_NAME, record.getHeader().getAttribute("exchange"));
     assertEquals(CONTENT_TYPE, record.getHeader().getAttribute("contentType"));
+    assertNull(record.getHeader().getAttribute("appId"));
     assertEquals(CUSTOM_HEADER_VAL, record.getHeader().getAttribute(CUSTOM_HEADER_KEY));
     runner.runDestroy();
   }

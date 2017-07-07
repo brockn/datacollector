@@ -123,30 +123,30 @@ public class RabbitSource extends BaseSource implements OffsetCommitter {
           BasicProperties properties = message.getProperties();
           Record.Header outHeader = record.getHeader();
           if (envelope != null) {
-            outHeader.setAttribute("deliveryTag", convToString(envelope.getDeliveryTag()));
-            outHeader.setAttribute("exchange", convToString(envelope.getExchange()));
-            outHeader.setAttribute("routingKey", convToString(envelope.getRoutingKey()));
-            outHeader.setAttribute("redelivered", convToString(envelope.isRedeliver()));
+            setHeaderIfNotNull(outHeader, "deliveryTag", envelope.getDeliveryTag());
+            setHeaderIfNotNull(outHeader, "exchange", envelope.getExchange());
+            setHeaderIfNotNull(outHeader, "routingKey", envelope.getRoutingKey());
+            setHeaderIfNotNull(outHeader, "redelivered", envelope.isRedeliver());
           }
-          outHeader.setAttribute("contentType", convToString(properties.getContentType()));
-          outHeader.setAttribute("contentEncoding", convToString(properties.getContentEncoding()));
-          outHeader.setAttribute("deliveryMode", convToString(properties.getDeliveryMode()));
-          outHeader.setAttribute("priority", convToString(properties.getPriority()));
-          outHeader.setAttribute("correlationId", convToString(properties.getCorrelationId()));
-          outHeader.setAttribute("replyTo", convToString(properties.getReplyTo()));
-          outHeader.setAttribute("expiration", convToString(properties.getExpiration()));
-          outHeader.setAttribute("messageId", convToString(properties.getMessageId()));
-          outHeader.setAttribute("timestamp", convToString(properties.getTimestamp()));
-          outHeader.setAttribute("messageType", convToString(properties.getType()));
-          outHeader.setAttribute("userId", convToString(properties.getUserId()));
-          outHeader.setAttribute("appId", convToString(properties.getAppId()));
+          setHeaderIfNotNull(outHeader, "contentType", properties.getContentType());
+          setHeaderIfNotNull(outHeader, "contentEncoding", properties.getContentEncoding());
+          setHeaderIfNotNull(outHeader, "deliveryMode", properties.getDeliveryMode());
+          setHeaderIfNotNull(outHeader, "priority", properties.getPriority());
+          setHeaderIfNotNull(outHeader, "correlationId", properties.getCorrelationId());
+          setHeaderIfNotNull(outHeader, "replyTo", properties.getReplyTo());
+          setHeaderIfNotNull(outHeader, "expiration", properties.getExpiration());
+          setHeaderIfNotNull(outHeader, "messageId", properties.getMessageId());
+          setHeaderIfNotNull(outHeader, "timestamp", properties.getTimestamp());
+          setHeaderIfNotNull(outHeader, "messageType", properties.getType());
+          setHeaderIfNotNull(outHeader, "userId", properties.getUserId());
+          setHeaderIfNotNull(outHeader, "appId", properties.getAppId());
           Map<String, Object> inHeaders = properties.getHeaders();
           if (inHeaders != null) {
             for (Map.Entry<String, Object> pair : inHeaders.entrySet()) {
               // I am concerned about overlapping with the above headers but it seems somewhat unlikely
               // in addition the behavior of copying these attributes in with no custom prefix is
               // how the jms origin behaves
-              outHeader.setAttribute(pair.getKey(), convToString(pair.getValue()));
+              setHeaderIfNotNull(outHeader, pair.getKey(), convToString(pair.getValue()));
             }
           }
           batchMaker.addRecord(record);
@@ -160,10 +160,13 @@ public class RabbitSource extends BaseSource implements OffsetCommitter {
     return nextSourceOffset;
   }
 
-  private static String convToString(Object o) {
-    if (o == null) {
-      return "";
+  private void setHeaderIfNotNull(Record.Header header, String key, Object val) {
+    if (val != null) {
+      header.setAttribute(key, convToString(val));
     }
+  }
+
+  private static String convToString(Object o) {
     if (o instanceof Date) {
       o = ((Date)o).getTime();
     }
