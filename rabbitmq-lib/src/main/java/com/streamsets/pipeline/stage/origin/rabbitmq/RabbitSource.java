@@ -146,7 +146,7 @@ public class RabbitSource extends BaseSource implements OffsetCommitter {
               // I am concerned about overlapping with the above headers but it seems somewhat unlikely
               // in addition the behavior of copying these attributes in with no custom prefix is
               // how the jms origin behaves
-              setHeaderIfNotNull(outHeader, pair.getKey(), convToString(pair.getValue()));
+              setHeaderIfNotNull(outHeader, pair.getKey(), pair.getValue());
             }
           }
           batchMaker.addRecord(record);
