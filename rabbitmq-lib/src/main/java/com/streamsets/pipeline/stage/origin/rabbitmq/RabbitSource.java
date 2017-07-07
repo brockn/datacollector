@@ -177,7 +177,7 @@ public class RabbitSource extends BaseSource implements OffsetCommitter {
     }
 
     try {
-      consumer.getChannel().basicAck(Long.parseLong(offset), true); // true is
+      consumer.getChannel().basicAck(Long.parseLong(offset), true);
       lastSourceOffset = offset;
     } catch (IOException e) {
       LOG.error("Failed to acknowledge offset: {}", offset, e);
