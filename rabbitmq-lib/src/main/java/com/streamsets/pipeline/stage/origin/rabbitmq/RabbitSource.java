@@ -15,6 +15,8 @@
  */
 package com.streamsets.pipeline.stage.origin.rabbitmq;
 
+import com.rabbitmq.client.BasicProperties;
+import com.rabbitmq.client.Envelope;
 import com.streamsets.pipeline.api.BatchMaker;
 import com.streamsets.pipeline.api.Field;
 import com.streamsets.pipeline.api.OffsetCommitter;
@@ -35,7 +37,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -51,7 +55,7 @@ public class RabbitSource extends BaseSource implements OffsetCommitter {
   private RabbitCxnManager rabbitCxnManager = new RabbitCxnManager();
   private StreamSetsMessageConsumer consumer;
   private DataParserFactory parserFactory;
-  private String lastSourceOffset;
+  private String lastSourceOffset = "";
 
   public RabbitSource(RabbitSourceConfigBean conf) {
     this.conf = conf;
@@ -60,8 +64,6 @@ public class RabbitSource extends BaseSource implements OffsetCommitter {
   @Override
   protected List<ConfigIssue> init() {
     List<ConfigIssue> issues = super.init();
-
-    this.lastSourceOffset = "";
 
     RabbitUtil.initRabbitStage(
         getContext(),
@@ -108,7 +110,6 @@ public class RabbitSource extends BaseSource implements OffsetCommitter {
     int maxRecords = Math.min(maxBatchSize, conf.basicConfig.maxBatchSize);
     int numRecords = 0;
     String nextSourceOffset = lastSourceOffset;
-
     while (System.currentTimeMillis() < maxTime && numRecords < maxRecords) {
       try {
         RabbitMessage message = messages.poll(conf.basicConfig.maxWaitTime, TimeUnit.MILLISECONDS);
@@ -118,9 +119,38 @@ public class RabbitSource extends BaseSource implements OffsetCommitter {
         String recordId = message.getEnvelope().toString();
         List<Record> records = parseRabbitMessage(recordId, message.getBody());
         for (Record record : records){
-          record.getHeader().setAttribute("deliveryTag", Long.toString(message.getEnvelope().getDeliveryTag()));
+          Envelope envelope = message.getEnvelope();
+          BasicProperties properties = message.getProperties();
+          Record.Header outHeader = record.getHeader();
+          if (envelope != null) {
+            outHeader.setAttribute("deliveryTag", convToString(envelope.getDeliveryTag()));
+            outHeader.setAttribute("exchange", convToString(envelope.getExchange()));
+            outHeader.setAttribute("routingKey", convToString(envelope.getRoutingKey()));
+            outHeader.setAttribute("redelivered", convToString(envelope.isRedeliver()));
+          }
+          outHeader.setAttribute("contentType", convToString(properties.getContentType()));
+          outHeader.setAttribute("contentEncoding", convToString(properties.getContentEncoding()));
+          outHeader.setAttribute("deliveryMode", convToString(properties.getDeliveryMode()));
+          outHeader.setAttribute("priority", convToString(properties.getPriority()));
+          outHeader.setAttribute("correlationId", convToString(properties.getCorrelationId()));
+          outHeader.setAttribute("replyTo", convToString(properties.getReplyTo()));
+          outHeader.setAttribute("expiration", convToString(properties.getExpiration()));
+          outHeader.setAttribute("messageId", convToString(properties.getMessageId()));
+          outHeader.setAttribute("timestamp", convToString(properties.getTimestamp()));
+          outHeader.setAttribute("messageType", convToString(properties.getType()));
+          outHeader.setAttribute("userId", convToString(properties.getUserId()));
+          outHeader.setAttribute("appId", convToString(properties.getAppId()));
+          Map<String, Object> inHeaders = properties.getHeaders();
+          if (inHeaders != null) {
+            for (Map.Entry<String, Object> pair : inHeaders.entrySet()) {
+              // I am concerned about overlapping with the above headers but it seems somewhat unlikely
+              // in addition the behavior of copying these attributes in with no custom prefix is
+              // how the jms origin behaves
+              outHeader.setAttribute(pair.getKey(), convToString(pair.getValue()));
+            }
+          }
           batchMaker.addRecord(record);
-          nextSourceOffset = record.getHeader().getAttribute("deliveryTag");
+          nextSourceOffset = outHeader.getAttribute("deliveryTag");
           numRecords++;
         }
       } catch (InterruptedException e) {
@@ -130,6 +160,16 @@ public class RabbitSource extends BaseSource implements OffsetCommitter {
     return nextSourceOffset;
   }
 
+  private static String convToString(Object o) {
+    if (o == null) {
+      return "";
+    }
+    if (o instanceof Date) {
+      o = ((Date)o).getTime();
+    }
+    return String.valueOf(o);
+  }
+
   @Override
   public void commit(String offset) throws StageException {
     if (offset == null || offset.isEmpty() || lastSourceOffset.equals(offset)) {
@@ -137,7 +177,7 @@ public class RabbitSource extends BaseSource implements OffsetCommitter {
     }
 
     try {
-      consumer.getChannel().basicAck(Long.parseLong(offset), true);
+      consumer.getChannel().basicAck(Long.parseLong(offset), true); // true is
       lastSourceOffset = offset;
     } catch (IOException e) {
       LOG.error("Failed to acknowledge offset: {}", offset, e);
@@ -193,5 +233,17 @@ public class RabbitSource extends BaseSource implements OffsetCommitter {
 
   private boolean isConnected() {
     return this.rabbitCxnManager.checkConnected();
+  }
+
+  TransferQueue<RabbitMessage> getMessageQueue() {
+    return messages;
+  }
+
+  void setDataParserFactory(DataParserFactory dataParserFactory) {
+    this.parserFactory = dataParserFactory;
+  }
+
+  void setStreamSetsMessageConsumer(StreamSetsMessageConsumer consumer) {
+    this.consumer = consumer;
   }
 }
